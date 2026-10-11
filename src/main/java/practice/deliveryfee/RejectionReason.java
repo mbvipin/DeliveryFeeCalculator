@@ -1,5 +1,6 @@
 package practice.deliveryfee;
 
+/** Why a customer's weight was rejected. Specific reasons beat a generic "invalid input". */
 public enum RejectionReason {
 
     INVALID_INPUT,
