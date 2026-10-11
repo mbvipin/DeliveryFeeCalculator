@@ -1,50 +1,42 @@
-# Collections & Streams Drill Set
+# Delivery Fee Calculator
 
-Repeatable practice exercises for the Java Collections Framework and Streams
-API, in the same style as the `txn-coding-round` project (Stage 1). Each
-stage is a small interface + stub implementation (with `TODO`s) + a JUnit
-test suite + a hidden reference solution.
+A small Java project, built step by step, that prices parcels by weight.
+Simple on the surface, with plenty of edge cases underneath.
 
-## Stages
+## Pricing rules (kg)
 
-| Stage | Package | Topic |
-|-------|---------|-------|
-| 2 | `practice.stage2` | Comparator, sorting, `PriorityQueue` |
-| 3 | `practice.stage3` | Streams fundamentals (map/filter/reduce/collect) |
-| 4 | `practice.stage4` | `groupingBy` / `partitioningBy` / `flatMap` |
-| 5 | `practice.stage5` | `Optional` |
-| 6 | `practice.stage6` | Immutable collections, `ConcurrentHashMap`, `CopyOnWriteArrayList` |
+| Weight | Fee |
+|--------|-----|
+| 10 to under 20 | 5.00 |
+| 20 to under 50 | 12.50 |
+| 50 to under 100 | 25.00 |
+| 100 and over | 40.00 + 0.30 per started kg over 100 |
 
-(Stage 1 — plain `HashMap`/`List`/`Set` without streams — is the separate
-`txn-coding-round` project.)
+Rejected: missing or non-positive weight, under 10 kg, over 500 kg,
+and more than 3 decimal places.
 
-## How to practice
+## What it practises
 
-1. Pick a stage, e.g. `practice.stage3.StreamExercisesImpl`.
-2. Implement the `TODO` methods (open the matching `*Exercises.java`
-   interface for the problem description — also summarized in each method's
-   Javadoc).
-3. Run just that stage's tests:
-   ```bash
-   mvn -q -Dtest=StreamExercisesTest test
-   ```
-   Or run everything:
-   ```bash
-   mvn test
-   ```
-4. Check your work against `solution/stageN/*Solution.java` if you're stuck
-   or want to compare approaches. These live outside `src/`, so they're never
-   compiled and never spoil the exercise by accident.
-5. To redo a stage from scratch (for speed drills), reset it back to the
-   TODO stub:
-   ```bash
-   ./reset.sh stage3      # just one stage
-   ./reset.sh all         # every stage
-   ```
+- `BigDecimal` for exact money maths and explicit rounding
+- Custom checked and unchecked exceptions with typed reasons (enums)
+- Immutable objects and defensive copies
+- Validating input and configuration up front
+- JUnit 5 parameterized tests for boundaries and edge cases
 
-## Suggested drill routine
+## Run the tests
 
-Do a stage cold, time yourself, then reset and redo it 1-2 more times later
-the same day or the next day until you can write each method without
-pausing to recall the API. Move to the next stage once a full `mvn test` run
-for the current one passes in one pass, under a few minutes.
+```bash
+mvn test
+```
+
+## Roadmap
+
+- [x] Calculator with tiered pricing and cess
+- [x] Tier validation (null-safe, non-negative values)
+- [x] `TierTable` constructor validation and defensive copy
+- [ ] `TierTable` contiguity checks (no gaps or overlaps)
+- [ ] Calculator driven by `TierTable`
+- [ ] Assert rejection reasons in tests
+
+Looking for a partner to learn with? Fork it, pick an unchecked item, and
+open a PR.
