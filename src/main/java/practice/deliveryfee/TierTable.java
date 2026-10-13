@@ -1,69 +1,72 @@
 package practice.deliveryfee;
 
-
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
  * The full price table: an ordered list of weight tiers.
  *
- * Why a class of its own? Rules about the whole set (no gaps, no overlaps) can't live
- * in WeightTier, which only knows about itself. This is where they will go.
+ * Why a class of its own? Rules about the whole set (no gaps, no overlaps, only the last
+ * tier unbounded) can't live in WeightTier, which only knows about itself. They are
+ * enforced here, once, when the table is constructed.
  */
 public final class TierTable {
 
     private final List<WeightTier> tiers;
 
-    public TierTable(List<WeightTier> tiers)
-    {
+    /**
+     * @throws InvalidTierException if the list is null, empty or contains a null, if a tier
+     *         other than the last has no upper limit, or if neighbouring tiers leave a gap
+     *         or overlap.
+     */
+    public TierTable(List<WeightTier> tiers) {
         // contains(null) is checked here so a bad element gives our own exception
-        // instead of a raw NullPointerException from List.copyOf below.
-        if(tiers == null || tiers.isEmpty()|| tiers.contains(null))
-        {
+        // instead of a raw NullPointerException while sorting.
+        if (tiers == null || tiers.isEmpty() || tiers.contains(null)) {
             throw new InvalidTierException(InvalidReason.INVALID_EMPTY_TABLE);
         }
 
-        Comparator<WeightTier> comparator= Comparator.comparing(WeightTier::getLowEnd);
+        // Callers may pass tiers in any order, so sort by lower bound before checking
+        // neighbours. Gaps and overlaps are only visible between adjacent tiers.
+        Comparator<WeightTier> byLowEnd = Comparator.comparing(WeightTier::getLowEnd);
 
         // LEARNING: defensive copy. If we kept the caller's list, they could add or remove
-        // tiers later and silently change our table. List.copyOf makes an immutable snapshot.
-        List<WeightTier> sortedTiers=tiers.stream().sorted(comparator).toList();
+        // tiers later and silently change our table. Stream.toList() returns an immutable
+        // snapshot, and sorting makes a new list, so the caller's list is never touched.
+        List<WeightTier> sortedTiers = tiers.stream().sorted(byLowEnd).toList();
 
-        for(int i=0; i< sortedTiers.size()-1; i++)
-        {
-            WeightTier current= sortedTiers.get(i);
-            WeightTier next= sortedTiers.get(i+1);
+        // Compare each tier with the one after it. The last tier has no "next", so the
+        // loop stops one short; it is allowed to be unbounded.
+        for (int i = 0; i < sortedTiers.size() - 1; i++) {
+            WeightTier current = sortedTiers.get(i);
+            WeightTier next = sortedTiers.get(i + 1);
 
-            if( current.getHighEnd() == null)
-            {
+            // An open-ended tier swallows every weight above it, so nothing may follow it.
+            if (current.getHighEnd() == null) {
                 throw new InvalidTierException(InvalidReason.INVALID_HIGHEND_UNBOUNDED_NOTLAST);
             }
 
-            if( current.getHighEnd().compareTo(next.getLowEnd()) <0)
-            {
+            // Tiers are lower-inclusive and upper-exclusive, so a tier must end exactly
+            // where the next one starts.
+            int comparison = current.getHighEnd().compareTo(next.getLowEnd());
+
+            if (comparison < 0) {
+                // Ends before the next starts: weights in between match no tier.
                 throw new InvalidTierException(InvalidReason.INVALID_GAP);
             }
 
-            if( current.getHighEnd().compareTo(next.getLowEnd()) > 0)
-            {
-                 throw new InvalidTierException(InvalidReason.INVALID_OVERLAP);
+            if (comparison > 0) {
+                // Ends after the next starts: weights in between match two tiers.
+                throw new InvalidTierException(InvalidReason.INVALID_OVERLAP);
             }
-
-
-
-
         }
 
-        this.tiers= sortedTiers;
-
+        this.tiers = sortedTiers;
     }
 
-    public List<WeightTier> getTiers()
-    {
+    /** The tiers in ascending order of lower bound. */
+    public List<WeightTier> getTiers() {
         // Safe to return directly: the list is immutable, so callers can't modify it.
         return tiers;
     }
-
-
 }

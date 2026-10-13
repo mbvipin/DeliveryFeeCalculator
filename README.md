@@ -34,7 +34,7 @@ mvn test
 - [x] Calculator with tiered pricing and cess
 - [x] Tier validation (null-safe, non-negative values)
 - [x] `TierTable` constructor validation and defensive copy
-- [ ] `TierTable` contiguity checks (no gaps or overlaps)
+- [x] `TierTable` contiguity checks (no gaps or overlaps)
 - [ ] Calculator driven by `TierTable`
 - [ ] Assert rejection reasons in tests
 
