@@ -1,6 +1,8 @@
 package practice.deliveryfee;
 
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -22,9 +24,39 @@ public final class TierTable {
             throw new InvalidTierException(InvalidReason.INVALID_EMPTY_TABLE);
         }
 
+        Comparator<WeightTier> comparator= Comparator.comparing(WeightTier::getLowEnd);
+
         // LEARNING: defensive copy. If we kept the caller's list, they could add or remove
         // tiers later and silently change our table. List.copyOf makes an immutable snapshot.
-        this.tiers=List.copyOf(tiers);
+        List<WeightTier> sortedTiers=tiers.stream().sorted(comparator).toList();
+
+        for(int i=0; i< sortedTiers.size()-1; i++)
+        {
+            WeightTier current= sortedTiers.get(i);
+            WeightTier next= sortedTiers.get(i+1);
+
+            if( current.getHighEnd() == null)
+            {
+                throw new InvalidTierException(InvalidReason.INVALID_HIGHEND_UNBOUNDED_NOTLAST);
+            }
+
+            if( current.getHighEnd().compareTo(next.getLowEnd()) <0)
+            {
+                throw new InvalidTierException(InvalidReason.INVALID_GAP);
+            }
+
+            if( current.getHighEnd().compareTo(next.getLowEnd()) > 0)
+            {
+                 throw new InvalidTierException(InvalidReason.INVALID_OVERLAP);
+            }
+
+
+
+
+        }
+
+        this.tiers= sortedTiers;
+
     }
 
     public List<WeightTier> getTiers()

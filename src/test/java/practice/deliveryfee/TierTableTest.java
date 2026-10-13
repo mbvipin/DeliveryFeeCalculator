@@ -63,6 +63,44 @@ public class TierTableTest {
 
         assertEquals(1,tierTable.getTiers().size());
 
+    }
+
+    @Test
+    void testTierTableOverlap()
+    {
+        WeightTier tier1= new WeightTier(new BigDecimal("10"),new BigDecimal("20"),
+                new BigDecimal("5"),null);
+
+        WeightTier tier2= new WeightTier(new BigDecimal("15"),new BigDecimal("25"),
+                new BigDecimal("5"),null);
+
+        List<WeightTier> tiers= new ArrayList<>();
+        tiers.add(tier1);
+        tiers.add(tier2);
+
+        InvalidTierException ex=assertThrows(InvalidTierException.class,() ->new TierTable(tiers).getTiers());
+
+        assertEquals(ex.getMessage(),InvalidReason.INVALID_OVERLAP.name());
+
+
+    }
+
+    @Test
+    void testTierTableGAP()
+    {
+        WeightTier tier1= new WeightTier(new BigDecimal("10"),new BigDecimal("20"),
+                new BigDecimal("5"),null);
+
+        WeightTier tier2= new WeightTier(new BigDecimal("25"),new BigDecimal("30"),
+                new BigDecimal("5"),null);
+
+        List<WeightTier> tiers= new ArrayList<>();
+        tiers.add(tier1);
+        tiers.add(tier2);
+
+        InvalidTierException ex=assertThrows(InvalidTierException.class,() ->new TierTable(tiers).getTiers());
+
+        assertEquals(ex.getMessage(),InvalidReason.INVALID_GAP.name());
 
 
     }
