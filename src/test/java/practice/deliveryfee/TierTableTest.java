@@ -2,106 +2,75 @@ package practice.deliveryfee;
 
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static practice.deliveryfee.Num.bd;
 
 public class TierTableTest {
 
-    private  static final BigDecimal TEN= new BigDecimal("10");
-    private  static final BigDecimal TWENTY= new BigDecimal("20");
-    private static final BigDecimal FIVE= new BigDecimal("5");
+    /** A tier with fees of 5 and no cess; the tests here only care about the bounds. */
+    private static WeightTier tier(int lowEnd, Integer highEnd) {
+        return new WeightTier(bd(lowEnd), highEnd == null ? null : bd(highEnd), bd(5), null);
+    }
 
-    @Test
-    void testNullTiers()
-    {
+    /** A mutable list, so tests can also check the table is unaffected by later changes. */
+    private static List<WeightTier> tiersOf(WeightTier... tiers) {
+        return new ArrayList<>(Arrays.asList(tiers));
+    }
 
-       InvalidTierException tierException= assertThrows( InvalidTierException.class, () -> new TierTable(null));
-
-       assertEquals(InvalidReason.INVALID_EMPTY_TABLE.name(),tierException.getMessage());
-
+    private static void assertInvalid(InvalidReason expected, List<WeightTier> tiers) {
+        InvalidTierException ex = assertThrows(InvalidTierException.class, () -> new TierTable(tiers));
+        assertEquals(expected.name(), ex.getMessage());
     }
 
     @Test
-    void testEmptyTiers()
-    {
-        List<WeightTier> tiers= new ArrayList<>();
-
-        InvalidTierException tierException= assertThrows( InvalidTierException.class, () -> new TierTable(tiers));
-
-        assertEquals(InvalidReason.INVALID_EMPTY_TABLE.name(),tierException.getMessage());
-
+    void testNullTiers() {
+        assertInvalid(InvalidReason.INVALID_EMPTY_TABLE, null);
     }
 
     @Test
-    void testTierListWithNullValues()
-    {
-        List<WeightTier> tiers= new ArrayList<>();
-        tiers.add(null);
-
-        InvalidTierException tierException= assertThrows( InvalidTierException.class, () -> new TierTable(tiers));
-
-        assertEquals(InvalidReason.INVALID_EMPTY_TABLE.name(),tierException.getMessage());
-
+    void testEmptyTiers() {
+        assertInvalid(InvalidReason.INVALID_EMPTY_TABLE, tiersOf());
     }
 
     @Test
-    void testTierTableAndEnforceImmutable()
-    {
-
-        List<WeightTier> tiers= new ArrayList<>();
-        tiers.add(new WeightTier(TEN,TWENTY,FIVE,null));
-
-        TierTable tierTable= new TierTable(tiers);
-
-        assertEquals(1,tierTable.getTiers().size());
-
-        tiers.add(new WeightTier(TEN.add(TEN),TWENTY.add(TWENTY),FIVE.add(FIVE),null));
-
-        assertEquals(1,tierTable.getTiers().size());
-
+    void testTierListWithNullValues() {
+        assertInvalid(InvalidReason.INVALID_EMPTY_TABLE, tiersOf((WeightTier) null));
     }
 
     @Test
-    void testTierTableOverlap()
-    {
-        WeightTier tier1= new WeightTier(new BigDecimal("10"),new BigDecimal("20"),
-                new BigDecimal("5"),null);
+    void testTierTableAndEnforceImmutable() {
+        List<WeightTier> tiers = tiersOf(tier(10, 20));
 
-        WeightTier tier2= new WeightTier(new BigDecimal("15"),new BigDecimal("25"),
-                new BigDecimal("5"),null);
+        TierTable tierTable = new TierTable(tiers);
 
-        List<WeightTier> tiers= new ArrayList<>();
-        tiers.add(tier1);
-        tiers.add(tier2);
+        assertEquals(1, tierTable.getTiers().size());
 
-        InvalidTierException ex=assertThrows(InvalidTierException.class,() ->new TierTable(tiers).getTiers());
+        tiers.add(tier(20, 40));
 
-        assertEquals(ex.getMessage(),InvalidReason.INVALID_OVERLAP.name());
-
-
+        assertEquals(1, tierTable.getTiers().size());
     }
 
     @Test
-    void testTierTableGAP()
-    {
-        WeightTier tier1= new WeightTier(new BigDecimal("10"),new BigDecimal("20"),
-                new BigDecimal("5"),null);
+    void testTierTableOverlap() {
+        assertInvalid(InvalidReason.INVALID_OVERLAP, tiersOf(tier(10, 20), tier(15, 25)));
+    }
 
-        WeightTier tier2= new WeightTier(new BigDecimal("25"),new BigDecimal("30"),
-                new BigDecimal("5"),null);
+    @Test
+    void testTierTableGAP() {
+        assertInvalid(InvalidReason.INVALID_GAP, tiersOf(tier(10, 20), tier(25, 30)));
+    }
 
-        List<WeightTier> tiers= new ArrayList<>();
-        tiers.add(tier1);
-        tiers.add(tier2);
+    @Test
+    void testTierTableWithFourTiers() {
+        List<WeightTier> tiers = tiersOf(tier(10, 20), tier(20, 50), tier(50, 100), tier(100, null));
 
-        InvalidTierException ex=assertThrows(InvalidTierException.class,() ->new TierTable(tiers).getTiers());
+        TierTable tierTable = new TierTable(tiers);
 
-        assertEquals(ex.getMessage(),InvalidReason.INVALID_GAP.name());
-
-
+        assertEquals(4, tierTable.getTiers().size());
     }
 }
