@@ -15,6 +15,8 @@ import java.util.Optional;
  */
 public class DeliveryFeeCalculator {
 
+    // ---------------------------------------------------------------- business limits
+
     // LEARNING: BigDecimal built from a String is exact. new BigDecimal(0.1) would
     // carry the binary error of the double 0.1, which is exactly what we avoid for money.
     private static final BigDecimal MIN_WEIGHT = new BigDecimal("10");
@@ -24,27 +26,34 @@ public class DeliveryFeeCalculator {
     // precise beyond grams, and rejecting extra digits stops ambiguous inputs.
     private static final int MAX_DECIMAL_PLACES = 3;
 
+    // Money always has exactly 2 decimals, so callers get "5.00", not "5".
+    private static final int MONEY_SCALE = 2;
+
+    // ---------------------------------------------------------------- state
+
     private final List<WeightTier> weightTiers;
+
+    // ---------------------------------------------------------------- construction
 
     private DeliveryFeeCalculator(List<WeightTier> weightTiers) {
         this.weightTiers = weightTiers;
     }
 
     public static DeliveryFeeCalculator withStandardPricing() {
-
-            // Tiers are lower-inclusive, upper-exclusive: 20 kg belongs to the 20-50 tier,
-            // not 10-20. A null high end means "no upper limit".
-            // LEARNING: List.of(...) is immutable, so nobody can change the price table later.
-            return new DeliveryFeeCalculator(
-                    List.of(
-                            new WeightTier(new BigDecimal("10"), new BigDecimal("20"), new BigDecimal("5"), new BigDecimal("0")),
-                            new WeightTier(new BigDecimal("20"), new BigDecimal("50"), new BigDecimal("12.50"), new BigDecimal("0")),
-                            new WeightTier(new BigDecimal("50"), new BigDecimal("100"), new BigDecimal("25.00"), new BigDecimal("0")),
-                            new WeightTier(new BigDecimal("100"), null, new BigDecimal("40.00"), new BigDecimal("0.30"))
-                    )
-            );
-
+        // Tiers are lower-inclusive, upper-exclusive: 20 kg belongs to the 20-50 tier,
+        // not 10-20. A null high end means "no upper limit".
+        // LEARNING: List.of(...) is immutable, so nobody can change the price table later.
+        return new DeliveryFeeCalculator(
+                List.of(
+                        new WeightTier(new BigDecimal("10"), new BigDecimal("20"), new BigDecimal("5"), new BigDecimal("0")),
+                        new WeightTier(new BigDecimal("20"), new BigDecimal("50"), new BigDecimal("12.50"), new BigDecimal("0")),
+                        new WeightTier(new BigDecimal("50"), new BigDecimal("100"), new BigDecimal("25.00"), new BigDecimal("0")),
+                        new WeightTier(new BigDecimal("100"), null, new BigDecimal("40.00"), new BigDecimal("0.30"))
+                )
+        );
     }
+
+    // ---------------------------------------------------------------- pricing
 
     /**
      * @throws RejectedException (checked) when the weight can't be priced. It is checked
@@ -52,9 +61,20 @@ public class DeliveryFeeCalculator {
      *         makes every caller decide how to handle it.
      */
     public BigDecimal calculate(BigDecimal weight) throws RejectedException {
-        // LEARNING: validate cheapest and most fundamental things first. The null check
-        // must come before any call on weight, or we would hit a NullPointerException.
-        // The order also decides which reason the caller sees when several apply.
+        validate(weight);
+
+        WeightTier tier = findTier(weight);
+
+        return feeFor(tier, weight);
+    }
+
+    /**
+     * Checks run cheapest and most fundamental first. The order also decides which
+     * reason the caller sees when several apply.
+     */
+    private void validate(BigDecimal weight) throws RejectedException {
+        // LEARNING: the null check must come before any call on weight,
+        // or we would hit a NullPointerException instead of our own exception.
         if (weight == null || weight.signum() <= 0) {
             throw new RejectedException(RejectionReason.INVALID_INPUT);
         }
@@ -74,18 +94,21 @@ public class DeliveryFeeCalculator {
         if (weight.stripTrailingZeros().scale() > MAX_DECIMAL_PLACES) {
             throw new RejectedException(RejectionReason.INVALID_PRECISION);
         }
+    }
 
+    private WeightTier findTier(BigDecimal weight) throws RejectedException {
         // The tier asks itself whether it contains the weight (see WeightTier.contains),
         // so the boundary rule lives in one place.
-        Optional<WeightTier> config = weightTiers.stream().filter(entry -> entry.contains(weight)).findFirst();
+        Optional<WeightTier> match = weightTiers.stream()
+                .filter(tier -> tier.contains(weight))
+                .findFirst();
 
-        // With a well-formed table this can't happen, since the checks above stay inside
-        // the covered range. It is a safety net if someone configures a table with a gap.
-        if (config.isEmpty()) {
-            throw new RejectedException(RejectionReason.INVALID_WEIGHT);
-        }
+        // With a well-formed table this can't happen, since validate() keeps the weight
+        // inside the covered range. It is a safety net if someone configures a table with a gap.
+        return match.orElseThrow(() -> new RejectedException(RejectionReason.INVALID_WEIGHT));
+    }
 
-        WeightTier tier = config.get();
+    private BigDecimal feeFor(WeightTier tier, BigDecimal weight) {
         BigDecimal deliveryFees = tier.getFees();
 
         if (tier.getCess().signum() > 0) {
@@ -98,9 +121,8 @@ public class DeliveryFeeCalculator {
             deliveryFees = deliveryFees.add(billableOverWeight.multiply(tier.getCess()));
         }
 
-        // Money always has exactly 2 decimals, so callers get "5.00", not "5".
         // CEILING rounds in the business's favour; with the current rates the value is
         // already exact, so this mostly fixes the scale.
-        return deliveryFees.setScale(2, RoundingMode.CEILING);
+        return deliveryFees.setScale(MONEY_SCALE, RoundingMode.CEILING);
     }
 }

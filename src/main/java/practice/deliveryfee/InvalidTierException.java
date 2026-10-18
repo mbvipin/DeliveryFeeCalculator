@@ -8,10 +8,9 @@ package practice.deliveryfee;
  * programming/configuration bug that should fail loudly at start-up, not be caught
  * and handled at every call site.
  */
-public class InvalidTierException extends RuntimeException{
+public class InvalidTierException extends RuntimeException {
 
-    public InvalidTierException(InvalidReason reason )
-    {
+    public InvalidTierException(InvalidReason reason) {
         super(reason.name());
     }
 }

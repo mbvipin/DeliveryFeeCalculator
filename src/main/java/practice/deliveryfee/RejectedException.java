@@ -12,14 +12,13 @@ public class RejectedException extends Exception {
 
     private final RejectionReason reason;
 
-    public RejectedException(RejectionReason rejectionReason) {
-
-        super(rejectionReason.name());
-        this.reason=rejectionReason;
+    public RejectedException(RejectionReason reason) {
+        // The enum name doubles as the message, so stack traces stay readable.
+        super(reason.name());
+        this.reason = reason;
     }
 
-    public RejectionReason getReason()
-    {
+    public RejectionReason getReason() {
         return reason;
     }
 }

@@ -1,7 +1,6 @@
 package practice.deliveryfee;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 /**
  * One row of the price table: weights in [lowEnd, highEnd) cost "fees", plus "cess"
@@ -12,17 +11,20 @@ import java.util.Objects;
  * It is package-private because only the calculator and tier table use it.
  */
 final class WeightTier {
+
     private final BigDecimal lowEnd;
     private final BigDecimal highEnd;
-    private  final BigDecimal fees;
-    private  final BigDecimal cess;
+    private final BigDecimal fees;
+    private final BigDecimal cess;
 
     /**
      * LEARNING: validate in the constructor ("fail fast"). A tier that exists is
      * always valid, so no other code needs to re-check it.
      * highEnd == null is allowed and means "open-ended".
+     *
+     * @throws InvalidTierException (unchecked) if any value breaks the rules below
      */
-    public WeightTier(BigDecimal lowEnd, BigDecimal highEnd, BigDecimal fees, BigDecimal cess) throws InvalidTierException {
+    WeightTier(BigDecimal lowEnd, BigDecimal highEnd, BigDecimal fees, BigDecimal cess) {
 
         // The null check comes first so the signum() call can't throw a NullPointerException.
         if (lowEnd == null || lowEnd.signum() <= 0) {
@@ -52,26 +54,31 @@ final class WeightTier {
         this.cess = cess == null ? BigDecimal.ZERO : cess;
     }
 
-    /** Lower bound inclusive, upper bound exclusive, so adjacent tiers never overlap. */
+    /**
+     * Lower bound inclusive, upper bound exclusive, so adjacent tiers never overlap.
+     *
+     * LEARNING: compareTo, never equals, for BigDecimal. equals also compares scale,
+     * so new BigDecimal("20").equals(new BigDecimal("20.0")) is false.
+     */
     boolean contains(BigDecimal weight) {
         return weight.compareTo(lowEnd) >= 0 && (highEnd == null || weight.compareTo(highEnd) < 0);
     }
 
-    public BigDecimal getLowEnd() {
+    BigDecimal getLowEnd() {
         return lowEnd;
     }
 
-    public BigDecimal getHighEnd() {
+    /** Null means this tier has no upper limit. */
+    BigDecimal getHighEnd() {
         return highEnd;
     }
 
-
-    public BigDecimal getFees() {
+    BigDecimal getFees() {
         return fees;
     }
 
-    public BigDecimal getCess() {
+    /** Never null; zero when the tier has no per-kg charge. */
+    BigDecimal getCess() {
         return cess;
     }
-
 }
