@@ -1,7 +1,9 @@
 package practice.deliveryfee;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The full price table: an ordered list of weight tiers.
@@ -20,9 +22,10 @@ public final class TierTable {
      *         or overlap.
      */
     public TierTable(List<WeightTier> tiers) {
-        // contains(null) is checked here so a bad element gives our own exception
-        // instead of a raw NullPointerException while sorting.
-        if (tiers == null || tiers.isEmpty() || tiers.contains(null)) {
+        // Null elements are checked here so a bad element gives our own exception
+        // instead of a raw NullPointerException while sorting. Not tiers.contains(null):
+        // immutable lists such as List.of(...) throw NullPointerException on it.
+        if (tiers == null || tiers.isEmpty() || tiers.stream().anyMatch(Objects::isNull)) {
             throw new InvalidTierException(InvalidReason.INVALID_EMPTY_TABLE);
         }
 
@@ -68,5 +71,15 @@ public final class TierTable {
     public List<WeightTier> getTiers() {
         // Safe to return directly: the list is immutable, so callers can't modify it.
         return tiers;
+    }
+
+    public BigDecimal getMinWeight()
+    {
+        return tiers.get(0).getLowEnd();
+    }
+
+    public  BigDecimal getMaxWeight()
+    {
+        return tiers.get(tiers.size()-1).getHighEnd();
     }
 }

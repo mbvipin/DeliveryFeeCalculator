@@ -1,11 +1,13 @@
 package practice.deliveryfee;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,7 +18,20 @@ public class DeliveryFeeCalculatorTest {
 
     // LEARNING: JUnit 5 creates a new test class instance per test method, so this field
     // is rebuilt for every test and tests can't leak state into each other.
-    private final DeliveryFeeCalculator feeCalculator = DeliveryFeeCalculator.withStandardPricing();
+    // The factory throws a checked RejectedException, which a field initializer can't
+    // declare, so the calculator is built in @BeforeEach instead.
+    private DeliveryFeeCalculator feeCalculator;
+
+    @BeforeEach
+    void setUp() throws RejectedException {
+        TierTable table = new TierTable(List.of(
+                new WeightTier(bd("10"), bd("20"), bd("5.00"), null),
+                new WeightTier(bd("20"), bd("50"), bd("12.50"), null),
+                new WeightTier(bd("50"), bd("100"), bd("25.00"), null),
+                new WeightTier(bd("100"), null, bd("40.00"), bd("0.30"))));
+
+        feeCalculator = DeliveryFeeCalculator.withStandardPricing(table, bd("500"));
+    }
 
     /** Every rejected weight must be reported with the checked RejectedException. */
     private void assertRejected(BigDecimal weight) {

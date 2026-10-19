@@ -20,7 +20,7 @@ public class DeliveryFeeCalculator {
     // LEARNING: BigDecimal built from a String is exact. new BigDecimal(0.1) would
     // carry the binary error of the double 0.1, which is exactly what we avoid for money.
     private static final BigDecimal MIN_WEIGHT = new BigDecimal("10");
-    private static final BigDecimal MAX_WEIGHT = new BigDecimal("500");
+
 
     // Scale (digits after the decimal point) we accept. Measuring devices are not
     // precise beyond grams, and rejecting extra digits stops ambiguous inputs.
@@ -33,24 +33,33 @@ public class DeliveryFeeCalculator {
 
     private final List<WeightTier> weightTiers;
 
+    private BigDecimal maxWeight;
+
     // ---------------------------------------------------------------- construction
 
-    private DeliveryFeeCalculator(List<WeightTier> weightTiers) {
+    private DeliveryFeeCalculator(List<WeightTier> weightTiers,BigDecimal maxWeight) {
         this.weightTiers = weightTiers;
+        this.maxWeight=maxWeight;
     }
 
-    public static DeliveryFeeCalculator withStandardPricing() {
+    public static DeliveryFeeCalculator withStandardPricing(TierTable table, BigDecimal maxWeight) throws RejectedException {
+
+        if(maxWeight.signum() <=0 || maxWeight .compareTo(table.getMinWeight())<=0 ||
+                (table.getMaxWeight() != null && maxWeight.compareTo(table.getMaxWeight()) >0))
+        {
+            throw new RejectedException(RejectionReason.INVALID_WEIGHT);
+        }
+
+
+
+
         // Tiers are lower-inclusive, upper-exclusive: 20 kg belongs to the 20-50 tier,
         // not 10-20. A null high end means "no upper limit".
         // LEARNING: List.of(...) is immutable, so nobody can change the price table later.
         return new DeliveryFeeCalculator(
-                List.of(
-                        new WeightTier(new BigDecimal("10"), new BigDecimal("20"), new BigDecimal("5"), new BigDecimal("0")),
-                        new WeightTier(new BigDecimal("20"), new BigDecimal("50"), new BigDecimal("12.50"), new BigDecimal("0")),
-                        new WeightTier(new BigDecimal("50"), new BigDecimal("100"), new BigDecimal("25.00"), new BigDecimal("0")),
-                        new WeightTier(new BigDecimal("100"), null, new BigDecimal("40.00"), new BigDecimal("0.30"))
-                )
-        );
+                table.getTiers(),maxWeight
+                );
+
     }
 
     // ---------------------------------------------------------------- pricing
@@ -85,7 +94,7 @@ public class DeliveryFeeCalculator {
             throw new RejectedException(RejectionReason.TOO_LIGHT);
         }
 
-        if (weight.compareTo(MAX_WEIGHT) > 0) {
+        if (weight.compareTo(maxWeight) > 0) {
             throw new RejectedException(RejectionReason.EXCEEDS_MAXIMUM);
         }
 
